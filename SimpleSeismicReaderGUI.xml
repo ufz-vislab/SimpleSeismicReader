@@ -1,0 +1,5 @@
+<ParaViewReaders>
+	<Reader name="SimpleSeismicReader" extensions="seismic"
+	        file_description="Simple 3d seismic file from OpendTect">
+	</Reader>
+</ParaViewReaders>
