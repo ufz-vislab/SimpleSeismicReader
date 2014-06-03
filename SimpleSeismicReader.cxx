@@ -39,51 +39,8 @@ int SimpleSeismicReader::RequestData(
 		outInfo->Get(vtkDataObject::DATA_OBJECT()));
 
 	output->SetExtent(
-	outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()));
+		outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()));
 	output->AllocateScalars(outInfo);
-
-	if (!this->FileName)
-	{
-		vtkErrorMacro(<< "A FileName must be specified.");
-		return 0;
-	}
-
-	if (output->GetScalarType() != VTK_FLOAT)
-	{
-		vtkErrorMacro("Execute: This source only outputs floats.");
-		return 1;
-	}
-
-//
-// Read header
-//
-	if (this->ReadHeader () == 0)
-	{
-		//
-		// Read Profiles
-		//
-		this->ReadData (output);
-	}
-
-	return 1;
-}
-
-std::vector<std::string>& SimpleSeismicReader::ReadLine(std::string line)
-{
-	std::stringstream str;
-	str << line;
-	std::vector<std::string>* values = new std::vector<std::string>();
-	std::string cell;
-	while(std::getline(str, cell, '\t'))
-		values->push_back(cell);
-
-	return *values;
-}
-
-int SimpleSeismicReader::ReadHeader()
-{
-	if(this->GetMTime() < this->ReadHeaderTime)
-		return 0;
 
 	if(!this->FileName)
 	{
@@ -100,18 +57,81 @@ int SimpleSeismicReader::ReadHeader()
 
 	vtkDebugMacro (<< "reading seismic header");
 
+	// Header info are 3 values in the first line
 	std::string line_string;
 	getline(in, line_string);
-	this->ReadLine(line_string);
+	std::vector<float> vals = this->ReadLine(line_string);
+	if(vals.size() != 3)
+	{
+		vtkErrorMacro(<< "File " << this->FileName << " header info invalid!");
+		delete &vals;
+		return -1;
+	}
+	depthStart = vals[0];
+	depthStep = vals[1];
+	depthSamples = vals[2];
+	//delete &vals;
 
-	this->ReadHeaderTime.Modified();
+	// Calculate spacing from line 2 and 3
+	getline(in, line_string);
+	std::vector<float> line2_vals = this->ReadLine(line_string);
+	getline(in, line_string);
+	std::vector<float> line3_vals = this->ReadLine(line_string);
+
+	if(line2_vals.size() < 2 || line3_vals.size() < 2)
+	{
+		vtkErrorMacro(<< "File " << this->FileName << " data invalid!");
+		//delete &line2_vals;
+		//delete &line3_vals;
+		return -1;
+	}
+
+	x_origin = line3_vals[0];
+	y_origin = line3_vals[1];
+	x_spacing = line3_vals[0] - line2_vals[0];
+	y_spacing = line3_vals[1] - line2_vals[1];
+
+	std::size_t lines_count = 3;
+	while (std::getline(in, line_string))
+		++lines_count;
+	xy_dim = lines_count - 1;
+
+	//delete &line2_vals;
+	//delete &line3_vals;
+
+	//vtkSmartPointer<vtkImageData> pxImage = vtkSmartPointer<vtkImageData>::New();
+	output->SetDimensions(xy_dim, xy_dim, depthSamples);
+	output->SetOrigin(x_origin, y_origin, depthStart);
+	output->SetSpacing(x_spacing, y_spacing, depthStep);
+	//pxImage->SetScalarTypeToUnsignedChar();
+	//pxImage->SetNumberOfScalarComponents(1);
+	//pxImage->AllocateScalars();
+
 	in.close();
-	return 0;
+
+	//output->ShallowCopy(pxImage);
+
+	return 1;
 }
 
-int SimpleSeismicReader::ReadData(vtkImageData *data)
+std::vector<float>& SimpleSeismicReader::ReadLine(std::string line)
 {
+	std::stringstream str;
+	str << line;
+	std::vector<float>* values = new std::vector<float>();
+	std::string cell;
+	while(std::getline(str, cell, '\t'))
+	{
+		std::istringstream ss(cell);
+		float f;
+		if(!(ss >> f))
+		{
+			vtkErrorMacro(<< "Value could not be converted to float");
+		}
+		values->push_back(f);
+	}
 
+	return *values;
 }
 
 void SimpleSeismicReader::PrintSelf(ostream& os, vtkIndent indent)

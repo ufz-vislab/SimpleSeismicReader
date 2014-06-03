@@ -28,9 +28,13 @@ protected:
 	float depthStep;
 	float depthSamples;
 
-	int ReadHeader();
-	int ReadData(vtkImageData *data);
-	std::vector<std::string>& ReadLine(std::string line);
+	float x_origin;
+	float y_origin;
+	float x_spacing;
+	float y_spacing;
+	int xy_dim;
+
+	std::vector<float>& ReadLine(std::string line);
 	int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
 private:
