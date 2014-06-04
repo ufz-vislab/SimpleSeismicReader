@@ -34,16 +34,6 @@ int SimpleSeismicReader::RequestInformation(
 {
 	vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-	//if(!this->FileName)
-	//{
-	//	vtkErrorMacro(<< "A FileName must be specified.");
-	//	return -1;
-	//}
-	//this->Reader->SetFileName(this->FileName);
-	//this->reader->SetFieldDelimiterCharacters("\t");
-	//this->Reader->Update();
-	//vtkTable* output = this->Reader->GetOutput();
-
 	if(!this->FileName)
 	{
 		vtkErrorMacro(<< "A FileName must be specified.");
@@ -116,8 +106,6 @@ int SimpleSeismicReader::RequestData(
 	vtkInformationVector **vtkNotUsed(inputVector),
 	vtkInformationVector *outputVector)
 {
-
-
 	vtkInformation *outInfo = outputVector->GetInformationObject(0);
 	vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_FLOAT, 1);
 
@@ -137,54 +125,26 @@ int SimpleSeismicReader::RequestData(
 	//output->SetOrigin(x_origin, y_origin, depthStart);
 	output->SetOrigin(0, 0, depthStart);
 	output->SetSpacing(x_spacing, y_spacing, depthStep);
-	//pxImage->SetScalarTypeToFloat();
-	//pxImage->SetNumberOfScalarComponents(1);
 	output->AllocateScalars(VTK_FLOAT, 1);
 	vtkDataArray* scalars = output->GetPointData()->GetScalars();
 	scalars->SetName("Data");
 
 	// skip first line
-	std::ifstream in2 (this->FileName, std::ios::in);
+	std::ifstream in (this->FileName, std::ios::in);
 	std::string line_string;
-	getline(in2, line_string);
+	getline(in, line_string);
 	std::size_t current_line = 0;
 
-	float *pxImageData = static_cast<float*>(output->GetScalarPointer());
-
-	//int* dims = output->GetDimensions();
-	while (std::getline(in2, line_string))
+	while (std::getline(in, line_string))
 	{
 		std::vector<float> vals = this->ReadLine(line_string);
-		//for(int i = 2; i < vals.size(); i++)
-		//{
-		//	pxImageData[1 * (current_line * xy_dim + current_line) + i] = vals[i];
-		//}
 
-		//for(int z = 0; z < depthSamples; z++)
-		//{
-		//	output->SetScalarComponentFromFloat(current_line % (xy_dim*xy_dim), current_line //% (xy_dim*xy_dim), z, 0, vals[2 + z]);
-//
-		//}
-
+		for(int z = 0; z < depthSamples; z++)
+			output->SetScalarComponentFromFloat((int)(current_line / xy_dim), current_line % (xy_dim), z, 0, vals[2 + z]);
 		++current_line;
 	}
 
-	for( int z = 0; z < depthSamples; ++z )
-     {
-         for ( int y = 0; y < xy_dim; ++y )
-         {
-             for( int x = 0; x < xy_dim; ++x )
-             {
-                 for( int c = 0; c < 1; ++c )
-                 {
-                     output->SetScalarComponentFromFloat ( x, y, z,
-c, x );
-                 }
-             }
-         }
-     }
-
-	in2.close();
+	in.close();
 
 
 	return 1;
