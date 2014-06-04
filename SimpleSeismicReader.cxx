@@ -7,6 +7,8 @@
 #include "vtkDataObject.h"
 #include "vtkSmartPointer.h"
 #include "vtkImageData.h"
+#include "vtkPointData.h"
+#include "vtkDataArray.h"
 
 #include <iostream>
 #include <sstream>
@@ -25,22 +27,22 @@ SimpleSeismicReader::SimpleSeismicReader()
 	this->SetNumberOfOutputPorts(1);
 }
 
-int SimpleSeismicReader::RequestData(
+int SimpleSeismicReader::RequestInformation(
 	vtkInformation *vtkNotUsed(request),
 	vtkInformationVector **vtkNotUsed(inputVector),
 	vtkInformationVector *outputVector)
 {
-
-	// get the info object
 	vtkInformation *outInfo = outputVector->GetInformationObject(0);
 
-	// get the ouptut
-	vtkImageData *output = vtkImageData::SafeDownCast(
-		outInfo->Get(vtkDataObject::DATA_OBJECT()));
-
-	output->SetExtent(
-		outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()));
-	output->AllocateScalars(outInfo);
+	//if(!this->FileName)
+	//{
+	//	vtkErrorMacro(<< "A FileName must be specified.");
+	//	return -1;
+	//}
+	//this->Reader->SetFileName(this->FileName);
+	//this->reader->SetFieldDelimiterCharacters("\t");
+	//this->Reader->Update();
+	//vtkTable* output = this->Reader->GetOutput();
 
 	if(!this->FileName)
 	{
@@ -94,22 +96,96 @@ int SimpleSeismicReader::RequestData(
 	std::size_t lines_count = 3;
 	while (std::getline(in, line_string))
 		++lines_count;
-	xy_dim = lines_count - 1;
+	xy_dim = sqrt(lines_count - 1);
+
+	in.close();
+
+	int ext[6] = {0, xy_dim, 0, xy_dim, 0, depthSamples};
+	double spacing[3] = {x_spacing, y_spacing, depthStep};
+	double origin[3] = {0, 0, 0};
+	outInfo->Set(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), ext, 6);
+	outInfo->Set(vtkDataObject::SPACING(), spacing, 3);
+	outInfo->Set(vtkDataObject::ORIGIN(), origin, 3);
+	vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_FLOAT, 1);
+
+	return 1;
+}
+
+int SimpleSeismicReader::RequestData(
+	vtkInformation *vtkNotUsed(request),
+	vtkInformationVector **vtkNotUsed(inputVector),
+	vtkInformationVector *outputVector)
+{
+
+
+	vtkInformation *outInfo = outputVector->GetInformationObject(0);
+	vtkDataObject::SetPointDataActiveScalarInfo(outInfo, VTK_FLOAT, 1);
+
+	// get the ouptut
+	vtkImageData *output = vtkImageData::SafeDownCast(
+		outInfo->Get(vtkDataObject::DATA_OBJECT()));
+
+	output->SetExtent(
+		outInfo->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT()));
+	output->AllocateScalars(outInfo);
 
 	//delete &line2_vals;
 	//delete &line3_vals;
 
 	//vtkSmartPointer<vtkImageData> pxImage = vtkSmartPointer<vtkImageData>::New();
 	output->SetDimensions(xy_dim, xy_dim, depthSamples);
-	output->SetOrigin(x_origin, y_origin, depthStart);
+	//output->SetOrigin(x_origin, y_origin, depthStart);
+	output->SetOrigin(0, 0, depthStart);
 	output->SetSpacing(x_spacing, y_spacing, depthStep);
-	//pxImage->SetScalarTypeToUnsignedChar();
+	//pxImage->SetScalarTypeToFloat();
 	//pxImage->SetNumberOfScalarComponents(1);
-	//pxImage->AllocateScalars();
+	output->AllocateScalars(VTK_FLOAT, 1);
+	vtkDataArray* scalars = output->GetPointData()->GetScalars();
+	scalars->SetName("Data");
 
-	in.close();
+	// skip first line
+	std::ifstream in2 (this->FileName, std::ios::in);
+	std::string line_string;
+	getline(in2, line_string);
+	std::size_t current_line = 0;
 
-	//output->ShallowCopy(pxImage);
+	float *pxImageData = static_cast<float*>(output->GetScalarPointer());
+
+	//int* dims = output->GetDimensions();
+	while (std::getline(in2, line_string))
+	{
+		std::vector<float> vals = this->ReadLine(line_string);
+		//for(int i = 2; i < vals.size(); i++)
+		//{
+		//	pxImageData[1 * (current_line * xy_dim + current_line) + i] = vals[i];
+		//}
+
+		//for(int z = 0; z < depthSamples; z++)
+		//{
+		//	output->SetScalarComponentFromFloat(current_line % (xy_dim*xy_dim), current_line //% (xy_dim*xy_dim), z, 0, vals[2 + z]);
+//
+		//}
+
+		++current_line;
+	}
+
+	for( int z = 0; z < depthSamples; ++z )
+     {
+         for ( int y = 0; y < xy_dim; ++y )
+         {
+             for( int x = 0; x < xy_dim; ++x )
+             {
+                 for( int c = 0; c < 1; ++c )
+                 {
+                     output->SetScalarComponentFromFloat ( x, y, z,
+c, x );
+                 }
+             }
+         }
+     }
+
+	in2.close();
+
 
 	return 1;
 }

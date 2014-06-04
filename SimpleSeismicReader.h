@@ -35,7 +35,10 @@ protected:
 	int xy_dim;
 
 	std::vector<float>& ReadLine(std::string line);
+	int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 	int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+
+	//vtkDelimitedTextReader* Reader;
 
 private:
 	SimpleSeismicReader(const SimpleSeismicReader&);  // Not implemented.
