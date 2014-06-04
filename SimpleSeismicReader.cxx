@@ -150,11 +150,11 @@ int SimpleSeismicReader::RequestData(
 	return 1;
 }
 
-std::vector<float>& SimpleSeismicReader::ReadLine(std::string line)
+std::vector<float> SimpleSeismicReader::ReadLine(std::string line)
 {
 	std::stringstream str;
 	str << line;
-	std::vector<float>* values = new std::vector<float>();
+	std::vector<float> values;
 	std::string cell;
 	while(std::getline(str, cell, '\t'))
 	{
@@ -164,10 +164,10 @@ std::vector<float>& SimpleSeismicReader::ReadLine(std::string line)
 		{
 			vtkErrorMacro(<< "Value could not be converted to float");
 		}
-		values->push_back(f);
+		values.push_back(f);
 	}
 
-	return *values;
+	return values;
 }
 
 void SimpleSeismicReader::PrintSelf(ostream& os, vtkIndent indent)

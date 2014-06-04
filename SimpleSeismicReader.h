@@ -34,7 +34,7 @@ protected:
 	float y_spacing;
 	int xy_dim;
 
-	std::vector<float>& ReadLine(std::string line);
+	std::vector<float> ReadLine(std::string line);
 	int RequestInformation(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 	int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
