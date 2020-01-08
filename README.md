@@ -3,7 +3,7 @@ SimpleSeismicReader
 
 A [ParaView](http://www.paraview.org) reader plugin for simple seismic files exported from [OpendTect](http://opendtect.org/).
 
-[![](https://zenodo.org/badge/doi/10.5281/zenodo.10509.png)](http://dx.doi.org/10.5281/zenodo.10509)
+[![](https://zenodo.org/badge/doi/10.5281/zenodo.10509.png)](https://doi.org/10.5281/zenodo.10509)
 
 Limitations
 -----------
